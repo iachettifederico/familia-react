@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>12 Week Year</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lucide/0.263.1/umd/lucide.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lucide-react/0.263.1/lucide-react.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.22.20/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body>
+    <div id="root"></div>
+    <script type="text/babel">
+        const { useState, useEffect, createContext, useContext } = React;
+        const { Calendar, ListTodo, ArrowLeft, ArrowRight, Home, ChevronDown, Plus, User } = lucide;
+
+        const AppContext = createContext();
+        const useApp = () => useContext(AppContext);
+
+        const App = () => {
+            const [state, setState] = useState({
+                users: [
+                    {
+                        id: '1',
+                        name: 'Bandit',
+                        birthDate: '1985-01-01',
+                        username: 'bandit',
+                        password: '12345678',
+                        isAdult: true
+                    },
+                    {
+                        id: '2',
+                        name: 'Chilly',
+                        birthDate: '1985-06-15',
+                        username: 'chilly',
+                        password: '12345678',
+                        isAdult: true
+                    },
+                    {
+                        id: '3',
+                        name: 'Bluey',
+                        birthDate: '2018-09-01',
+                        username: 'bluey',
+                        password: '12345678',
+                        isAdult: false
+                    },
+                    {
+                        id: '4',
+                        name: 'Bingo',
+                        birthDate: '2020-03-15',
+                        username: 'bingo',
+                        password: '12345678',
+                        isAdult: false
+                    }
+                ],
+                calendarStartDate: '2025-01-27',
+                activeUserId: '1'
+            });
+
+            useEffect(() => {
+                const savedData = localStorage.getItem('12weekyear_data');
+                if (savedData) {
+                    setState(JSON.parse(savedData));
+                }
+            }, []);
+
+            useEffect(() => {
+                localStorage.setItem('12weekyear_data', JSON.stringify(state));
+            }, [state]);
+
+            const addUser = (user) => {
+                setState(prev => ({
+                    ...prev,
+                    users: [...prev.users, { ...user, id: Date.now().toString() }]
+                }));
+            };
+
+            const setCalendarStart = (date) => {
+                setState(prev => ({
+                    ...prev,
+                    calendarStartDate: date
+                }));
+            };
+
+            const setActiveUser = (userId) => {
+                setState(prev => ({
+                    ...prev,
+                    activeUserId: userId
+                }));
+            };
+
+            return (
+                <AppContext.Provider value={{ state, addUser, setCalendarStart, setActiveUser }}>
+                    <Layout />
+                </AppContext.Provider>
+            );
+        };
+
+        const Layout = () => {
+            const { state } = useApp();
+            const [view, setView] = useState('week');
+
+            if (!state.calendarStartDate || !state.activeUserId) {
+                return <UserSetup />;
+            }
+
+            return (
+                <div className="min-h-screen bg-gray-50">
+                    <header className="bg-white border-b">
+                        <div className="max-w-7xl mx-auto px-4">
+                            <div className="flex justify-between items-center h-16">
+                                <h1 className="text-xl font-bold">12 Week Year</h1>
+                                <NavMenu view={view} setView={setView} />
+                            </div>
+                        </div>
+                    </header>
+                    <main className="max-w-7xl mx-auto p-4">
+                        {view === 'week' && <WeekView />}
+                        {view === 'year' && <YearView />}
+                        {view === 'goals' && <GoalsView />}
+                    </main>
+                </div>
+            );
+        };
+
+        const NavMenu = ({ view, setView }) => {
+            return (
+                <div className="flex items-center gap-4">
+                    <div className="flex gap-2">
+                        <button
+                            onClick={() => setView('week')}
+                            className={`px-3 py-2 rounded flex items-center gap-2 ${
+                                view === 'week' ? 'bg-blue-100 text-blue-700' : 'hover:bg-gray-100'
+                            }`}
+                        >
+                            <Calendar size={20} />
+                            <span className="hidden sm:inline">Vista Semanal</span>
+                        </button>
+                        <button
+                            onClick={() => setView('year')}
+                            className={`px-3 py-2 rounded flex items-center gap-2 ${
+                                view === 'year' ? 'bg-blue-100 text-blue-700' : 'hover:bg-gray-100'
+                            }`}
+                        >
+                            <Calendar size={20} />
+                            <span className="hidden sm:inline">Vista Anual</span>
+                        </button>
+                        <button
+                            onClick={() => setView('goals')}
+                            className={`px-3 py-2 rounded flex items-center gap-2 ${
+                                view === 'goals' ? 'bg-blue-100 text-blue-700' : 'hover:bg-gray-100'
+                            }`}
+                        >
+                            <ListTodo size={20} />
+                            <span className="hidden sm:inline">Metas</span>
+                        </button>
+                    </div>
+                    <UserMenu />
+                </div>
+            );
+        };
+
+        const UserMenu = () => {
+            const { state, setActiveUser } = useApp();
+            const [showMenu, setShowMenu] = useState(false);
+            
+            const activeUser = state.users.find(u => u.id === state.activeUserId);
+
+            return (
+                <div className="relative">
+                    <button
+                        onClick={() => setShowMenu(!showMenu)}
+                        className="flex items-center gap-2 px-3 py-2 rounded hover:bg-gray-100"
+                    >
+                        <User size={20} />
+                        <span className="hidden sm:inline">{activeUser?.name || 'Usuario'}</span>
+                    </button>
+                    {showMenu && (
+                        <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border">
+                            <div className="p-2">
+                                {state.users.map(user => (
+                                    <button
+                                        key={user.id}
+                                        onClick={() => {
+                                            setActiveUser(user.id);
+                                            setShowMenu(false);
+                                        }}
+                                        className="w-full text-left px-3 py-2 rounded hover:bg-gray-100"
+                                    >
+                                        {user.name}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        const WeekView = () => {
+            const days = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+            const { state } = useApp();
+            const todayDate = new Date();
+            const startDate = new Date(state.calendarStartDate);
+            const activeUser = state.users.find(u => u.id === state.activeUserId);
+
+            const getDayDate = (index) => {
+                const date = new Date(startDate);
+                date.setDate(date.getDate() + index);
+                return date;
+            };
+
+            const isToday = (date) => {
+                return date.toDateString() === todayDate.toDateString();
+            };
+
+            return (
+                <div className="p-4 space-y-6">
+                    <div className="flex justify-between items-center">
+                        <div className="flex gap-2">
+                            <button className="p-2 rounded hover:bg-gray-100"><ArrowLeft size={20} /></button>
+                            <button className="p-2 rounded hover:bg-gray-100"><ArrowRight size={20} /></button>
+                            <button className="p-2 rounded hover:bg-gray-100"><Home size={20} /></button>
+                        </div>
+                        <div className="text-center">
+                            <h2 className="font-bold">Semana del {startDate.toLocaleDateString('es-AR')}</h2>
+                            <p className="text-sm text-gray-600">{activeUser.name}</p>
+                        </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-7 gap-4">
+                        {days.map((day, index) => {
+                            const date = getDayDate(index);
+                            return (
+                                <div 
+                                    key={day}
+                                    className={`p-4 rounded-lg border ${isToday(date) ? 'ring-2 ring-blue-500 bg-blue-50' : 'bg-white'}`}
+                                >
+                                    <div className="font-semibold mb-3">
+                                        <div>{day}</div>
+                                        <div className="text-sm text-gray-600">{date.getDate()}</div>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <div className="p-2 bg-green-100 rounded text-sm">Meta 1</div>
+                                        <div className="p-2 bg-blue-100 rounded text-sm">Meta 2</div>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+            );
+        };
+
+        const YearView = () => (
+            <div>Vista Anual (en desarrollo)</div>
+        );
+
+        const GoalsView = () => (
+      <div>Vista de Metas (en desarrollo)</div>
+      );
+
+      ReactDOM.render(<App />, document.getElementById('root'));
+    </script>
+</body>
+</html>
